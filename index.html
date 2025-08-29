@@ -4,60 +4,181 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quick Read Summarizer</title>
-    <!-- Google AI SDK -->
     <script type="module">
         import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
         window.GoogleGenerativeAI = GoogleGenerativeAI;
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
+        /* --- MODERN UI DESIGN SYSTEM --- */
         :root {
-            --bg-color: #f8f9fa; --text-color: #212529; --primary-color: #007bff;
-            --card-bg: #ffffff; --border-color: #dee2e6; --shadow: 0 4px 6px rgba(0,0,0,0.05 );
-            --input-bg: #f1f3f5; --placeholder-color: #adb5bd; --button-color: #495057;
-            --button-hover: #343a40; --loader-color: #007bff;
+            /* Light Theme */
+            --bg-color: #f7f8fc;
+            --text-color: #1a1a2e;
+            --text-light-color: #6b7280;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --input-bg: #f9fafb;
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-gradient-hover: linear-gradient(135deg, #768eff 0%, #8b5fbf 100%);
+            --loader-color: #667eea;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.07);
         }
+
+        body.dark-mode {
+            /* Dark Theme */
+            --bg-color: #111827;
+            --text-color: #f9fafb;
+            --text-light-color: #9ca3af;
+            --card-bg: #1f2937;
+            --border-color: #374151;
+            --input-bg: #374151;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -4px rgba(0, 0, 0, 0.15);
+        }
+
+        /* --- GENERAL STYLES --- */
+        *, *::before, *::after { box-sizing: border-box; }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            margin: 0; background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        .container { max-width: 1100px; margin: 20px auto; padding: 20px; }
+
+        .container { max-width: 1100px; margin: 2rem auto; padding: 1rem; }
         .page { display: none; }
-        .page.active { display: block; }
-        /* Setup Page Styles */
-        .setup-container { max-width: 600px; margin: 50px auto; background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: var(--shadow); }
-        .setup-container h1 { text-align: center; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
-        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg); box-sizing: border-box; }
-        .btn { display: block; width: 100%; padding: 12px; border: none; border-radius: 8px; background-color: var(--button-color); color: white; font-size: 16px; cursor: pointer; transition: background-color 0.2s; }
-        .btn:hover { background-color: var(--button-hover); }
-        .api-link { font-size: 12px; text-align: right; margin-top: 5px; }
-        .api-link a { color: var(--primary-color); text-decoration: none; }
-        /* Main App Styles */
-        .app-header { display: flex; justify-content: space-between; align-items: center; }
-        .settings-btn { background: none; border: none; cursor: pointer; padding: 5px; }
-        .settings-btn svg { width: 24px; height: 24px; fill: #6c757d; }
-        .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
-        .input-column, .output-column { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: var(--shadow); }
-        .column-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; }
-        .column-header h2 { margin: 0; }
-        .copy-btn { background: #e9ecef; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
-        textarea { width: 100%; height: 200px; padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg); resize: vertical; box-sizing: border-box; }
-        .image-upload-box { border: 2px dashed var(--border-color); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; background: var(--input-bg); margin-bottom: 20px; }
-        .image-upload-box:hover { border-color: var(--primary-color); }
-        .image-preview-container { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-        .img-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
-        .summarize-options { margin-top: 20px; }
-        #summary-result { min-height: 300px; background: var(--input-bg); border-radius: 8px; padding: 15px; white-space: pre-wrap; word-wrap: break-word; }
-        .loader { display: none; margin: 50px auto; width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid var(--loader-color); border-radius: 50%; animation: spin 1s linear infinite; }
+        .page.active { display: block; animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        h1 { font-size: 2.25rem; font-weight: 700; color: var(--text-color); }
+        h2 { font-size: 1.25rem; font-weight: 600; margin: 0; }
+        p { color: var(--text-light-color); }
+
+        /* --- SETUP PAGE --- */
+        .setup-container {
+            max-width: 500px; margin: 10vh auto; background: var(--card-bg);
+            padding: 2.5rem; border-radius: 12px; box-shadow: var(--shadow-lg); text-align: center;
+        }
+
+        .form-group { margin-bottom: 1.5rem; text-align: left; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--border-color); border-radius: 8px;
+            background: var(--input-bg); font-size: 1rem; color: var(--text-color);
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .btn {
+            display: block; width: 100%; padding: 0.8rem 1rem; border: none; border-radius: 8px;
+            background: var(--primary-gradient); color: white; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s ease-out; box-shadow: var(--shadow);
+        }
+        .btn:hover { background: var(--primary-gradient-hover); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .api-link { font-size: 0.8rem; text-align: right; margin-top: 0.5rem; }
+        .api-link a { color: #667eea; text-decoration: none; font-weight: 500; }
+        .api-link a:hover { text-decoration: underline; }
+
+        /* --- MAIN APP --- */
+        .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .header-controls { display: flex; align-items: center; gap: 1rem; }
+
+        .settings-btn {
+            background: var(--card-bg); border: 1px solid var(--border-color); cursor: pointer;
+            padding: 0.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s ease; box-shadow: var(--shadow);
+        }
+        .settings-btn:hover { transform: rotate(20deg); border-color: #a3b3f7; }
+        .settings-btn svg { width: 24px; height: 24px; fill: var(--text-light-color); }
+        
+        /* Dark Mode Toggle */
+        .theme-switch-wrapper { display: flex; align-items: center; }
+        .theme-switch { display: inline-block; height: 26px; position: relative; width: 50px; }
+        .theme-switch input { display:none; }
+        .slider { background-color: #ccc; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 26px; }
+        .slider:before { background-color: #fff; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; position: absolute; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #667eea; }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .input-column, .output-column {
+            background: var(--card-bg); padding: 1.75rem; border-radius: 12px;
+            box-shadow: var(--shadow); display: flex; flex-direction: column;
+            transition: background-color 0.3s ease;
+        }
+
+        .column-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem; }
+        .secondary-btn {
+            background: var(--input-bg); color: var(--text-light-color); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 0.4rem 0.8rem; cursor: pointer; font-size: 0.875rem;
+            font-weight: 500; transition: all 0.2s ease;
+        }
+        .secondary-btn:hover { background-color: var(--border-color); }
+
+        textarea {
+            width: 100%; min-height: 200px; padding: 1rem; border: 1px solid var(--border-color);
+            border-radius: 8px; background: var(--input-bg); resize: vertical;
+            font-size: 1rem; font-family: var(--main-font); color: var(--text-color);
+            transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.3s ease;
+        }
+        textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2); }
+        
+        #word-count { font-size: 0.8rem; color: var(--text-light-color); text-align: right; margin-top: 0.5rem; height: 1em; }
+
+        .image-upload-box {
+            border: 2px dashed var(--border-color); border-radius: 8px; padding: 2rem; text-align: center;
+            cursor: pointer; background: var(--input-bg); margin-bottom: 1.5rem;
+            transition: all 0.2s ease;
+        }
+        .image-upload-box:hover { border-color: #a3b3f7; background-color: rgba(102, 126, 234, 0.1); }
+        .image-upload-box span { font-weight: 500; color: var(--text-light-color); }
+
+        .image-preview-container { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; margin-bottom: 1.5rem; }
+        .img-preview { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid var(--border-color); }
+        
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: auto; padding-top: 1.5rem; }
+        
+        #summary-result {
+            flex-grow: 1; min-height: 300px; background: var(--input-bg); border-radius: 8px;
+            padding: 1rem; white-space: pre-wrap; word-wrap: break-word; line-height: 1.7;
+            color: var(--text-color); transition: background-color 0.3s ease;
+        }
+        
+        .loader {
+            display: none; margin: 5rem auto; width: 50px; height: 50px;
+            border: 5px solid var(--border-color); border-top: 5px solid var(--loader-color);
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Modal Styles */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-        /* Responsive */
+
+        /* MODAL */
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(10, 10, 20, 0.6); backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background-color: var(--card-bg); margin: 15% auto; padding: 2rem; border: none;
+            width: 90%; max-width: 500px; border-radius: 12px; box-shadow: var(--shadow-lg);
+        }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; transition: color 0.2s; }
+        .close-btn:hover { color: var(--text-color); }
+
         @media (max-width: 900px) { .app-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 600px) { .options-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -66,7 +187,7 @@
         <div class="container">
             <div class="setup-container">
                 <h1>Quick Read Summarizer</h1>
-                <p style="text-align:center;">Enter your Gemini API key to get started.</p>
+                <p>Enter your Gemini API key to get started.</p>
                 <div class="form-group">
                     <label for="api-key">Gemini API Key</label>
                     <input type="password" id="api-key" placeholder="Enter your API Key">
@@ -74,9 +195,8 @@
                 </div>
                 <div class="form-group">
                     <label for="model-select-setup">Gemini Model</label>
-                    <!-- *** MODIFIED: Added future Flash models *** -->
                     <select id="model-select-setup">
-                        <option value="gemini-1.5-flash" selected>Gemini 1.5 Flash (Recommended )</option>
+                        <option value="gemini-1.5-flash" selected>Gemini 1.5 Flash (Recommended)</option>
                         <option value="gemini-2.0-flash">Gemini 2.0 Flash (Future)</option>
                         <option value="gemini-2.5-flash">Gemini 2.5 Flash (Future)</option>
                     </select>
@@ -90,13 +210,24 @@
         <div class="container">
             <div class="app-header">
                 <h1>Quick Read Summarizer</h1>
-                <button id="settings-btn" class="settings-btn" title="Settings">
-                    <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.69-1.62-0.92L14.4,2.23C14.38,2.01,14.2,1.84,13.98,1.84 h-3.96c-0.22,0-0.4,0.17-0.43,0.39L9.2,4.55C8.61,4.78,8.08,5.09,7.58,5.47L5.19,4.51C4.97,4.44,4.72,4.51,4.6,4.73L2.68,8.05 c-0.11,0.2-0.06,0.47,0.12,0.61l2.03,1.58C4.78,10.56,4.76,10.86,4.76,11.16c0,0.3,0.02,0.6,0.06,0.9l-2.03,1.58 c-0.18,0.14-0.23-0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.69,1.62,0.92l0.39,2.32 c0.02,0.22,0.2,0.39,0.43,0.39h3.96c0.22,0,0.4-0.17,0.43-0.39l0.39-2.32c0.59-0.23,1.12-0.54,1.62-0.92l2.39,0.96 c0.22,0.07,0.47,0,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
-                </button>
+                <div class="header-controls">
+                    <div class="theme-switch-wrapper">
+                        <label class="theme-switch" for="theme-toggle">
+                            <input type="checkbox" id="theme-toggle" />
+                            <div class="slider round"></div>
+                        </label>
+                    </div>
+                    <button id="settings-btn" class="settings-btn" title="Settings">
+                        <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.69-1.62-0.92L14.4,2.23C14.38,2.01,14.2,1.84,13.98,1.84 h-3.96c-0.22,0-0.4,0.17-0.43,0.39L9.2,4.55C8.61,4.78,8.08,5.09,7.58,5.47L5.19,4.51C4.97,4.44,4.72,4.51,4.6,4.73L2.68,8.05 c-0.11,0.2-0.06,0.47,0.12,0.61l2.03,1.58C4.78,10.56,4.76,10.86,4.76,11.16c0,0.3,0.02,0.6,0.06,0.9l-2.03,1.58 c-0.18,0.14-0.23-0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.69,1.62,0.92l0.39,2.32 c0.02,0.22,0.2,0.39,0.43,0.39h3.96c0.22,0,0.4-0.17,0.43-0.39l0.39-2.32c0.59-0.23,1.12-0.54,1.62-0.92l2.39,0.96 c0.22,0.07,0.47,0,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+                    </button>
+                </div>
             </div>
             <div class="app-grid">
                 <div class="input-column">
-                    <div class="column-header"><h2>Your Content</h2></div>
+                    <div class="column-header">
+                        <h2>Your Content</h2>
+                        <button id="clear-content-btn" class="secondary-btn">Clear</button>
+                    </div>
                     <p>Upload images or type your text below.</p>
                     <div id="image-upload-box" class="image-upload-box">
                         <span>⬆️ Upload Images (Max 5)</span>
@@ -104,19 +235,36 @@
                     </div>
                     <div id="image-preview-container"></div>
                     <textarea id="text-input" placeholder="Type or paste your text here..."></textarea>
-                    <div class="summarize-options">
-                        <label for="format-select">Summarize Format</label>
-                        <select id="format-select" class="form-group">
-                            <option value="Bullet Points">Bullet Points</option>
-                            <option value="a single Paragraph">Paragraph</option>
-                        </select>
+                    <div id="word-count">0 words</div>
+                    <div class="options-grid">
+                        <div class="form-group">
+                            <label for="format-select">Summarize Format</label>
+                            <select id="format-select">
+                                <option value="in the form of Key Points">Key Points</option>
+                                <option value="in the form of Bullet Points">Bullet Points</option>
+                                <option value="as a single Paragraph">Paragraph</option>
+                                <option value="as a Detailed Summary">Detailed Summary</option>
+                                <option value="as an Executive Summary">Executive Summary</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="language-select">Output Language</label>
+                            <select id="language-select">
+                                <option value="the same language as the input">Same as Input</option>
+                                <option value="English">English</option>
+                                <option value="Burmese">Burmese</option>
+                                <option value="Japanese">Japanese</option>
+                                <option value="Spanish">Spanish</option>
+                                <option value="French">French</option>
+                            </select>
+                        </div>
                     </div>
                     <button id="get-summary-btn" class="btn">Get Summary</button>
                 </div>
                 <div class="output-column">
                     <div class="column-header">
                         <h2>Summary Result</h2>
-                        <button id="copy-summary-btn" class="copy-btn">📋 Copy</button>
+                        <button id="copy-summary-btn" class="secondary-btn">📋 Copy</button>
                     </div>
                     <div id="loader" class="loader"></div>
                     <div id="summary-result">Your summary will appear here...</div>
@@ -125,7 +273,6 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
     <div id="settings-modal" class="modal">
         <div class="modal-content">
             <span id="close-modal-btn" class="close-btn">&times;</span>
@@ -136,7 +283,6 @@
             </div>
             <div class="form-group">
                 <label for="model-select-modal">Gemini Model</label>
-                <!-- *** MODIFIED: Added future Flash models *** -->
                 <select id="model-select-modal">
                     <option value="gemini-1.5-flash">Gemini 1.5 Flash (Recommended)</option>
                     <option value="gemini-2.0-flash">Gemini 2.0 Flash (Future)</option>
@@ -155,17 +301,19 @@
             const apiKeyInput = document.getElementById('api-key');
             const modelSelectSetup = document.getElementById('model-select-setup');
             const continueBtn = document.getElementById('continue-btn');
-            
             const imageUploadBox = document.getElementById('image-upload-box');
             const imageUploadInput = document.getElementById('image-upload-input');
             const imagePreviewContainer = document.getElementById('image-preview-container');
             const textInput = document.getElementById('text-input');
             const formatSelect = document.getElementById('format-select');
+            const languageSelect = document.getElementById('language-select');
             const getSummaryBtn = document.getElementById('get-summary-btn');
             const loader = document.getElementById('loader');
             const summaryResultDiv = document.getElementById('summary-result');
             const copySummaryBtn = document.getElementById('copy-summary-btn');
-
+            const clearContentBtn = document.getElementById('clear-content-btn');
+            const wordCountEl = document.getElementById('word-count');
+            const themeToggle = document.getElementById('theme-toggle');
             const settingsBtn = document.getElementById('settings-btn');
             const settingsModal = document.getElementById('settings-modal');
             const closeModalBtn = document.getElementById('close-modal-btn');
@@ -173,10 +321,30 @@
             const modelSelectModal = document.getElementById('model-select-modal');
             const updateSettingsBtn = document.getElementById('update-settings-btn');
 
-            // --- STATE ---
             let uploadedImages = [];
             let genAI;
             let model;
+
+            // --- THEME/DARK MODE ---
+            themeToggle.addEventListener('change', () => {
+                document.body.classList.toggle('dark-mode', themeToggle.checked);
+                localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light');
+            });
+
+            function applySavedTheme() {
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark') {
+                    themeToggle.checked = true;
+                    document.body.classList.add('dark-mode');
+                }
+            }
+
+            // --- WORD COUNT ---
+            textInput.addEventListener('input', () => {
+                const text = textInput.value.trim();
+                const words = text ? text.split(/\s+/).length : 0;
+                wordCountEl.textContent = `${words} words`;
+            });
 
             // --- INITIALIZATION & SETTINGS ---
             function initializeApp(apiKey, modelName) {
@@ -187,7 +355,7 @@
                     mainPage.classList.add('active');
                     return true;
                 } catch (error) {
-                    alert("Failed to initialize with the provided API key or Model. Please check them.");
+                    alert("Initialization Error: " + error.message);
                     console.error("Initialization Error:", error);
                     localStorage.clear();
                     return false;
@@ -195,6 +363,7 @@
             }
 
             function loadAndInit() {
+                applySavedTheme();
                 const savedApiKey = localStorage.getItem('geminiApiKey');
                 const savedModel = localStorage.getItem('geminiModel') || 'gemini-1.5-flash';
                 if (savedApiKey) {
@@ -206,8 +375,7 @@
                 const apiKey = apiKeyInput.value.trim();
                 const selectedModel = modelSelectSetup.value;
                 if (!apiKey) {
-                    alert('Please enter your Gemini API Key.');
-                    return;
+                    alert('Please enter your Gemini API Key.'); return;
                 }
                 if (initializeApp(apiKey, selectedModel)) {
                     localStorage.setItem('geminiApiKey', apiKey);
@@ -217,28 +385,21 @@
 
             // --- MODAL LOGIC ---
             settingsBtn.addEventListener('click', () => {
-                apiKeyModalInput.value = ''; 
+                apiKeyModalInput.value = '';
                 apiKeyModalInput.placeholder = 'Enter new key (optional)';
                 modelSelectModal.value = localStorage.getItem('geminiModel') || 'gemini-1.5-flash';
                 settingsModal.style.display = 'block';
             });
             closeModalBtn.addEventListener('click', () => settingsModal.style.display = 'none');
             window.addEventListener('click', (event) => {
-                if (event.target == settingsModal) {
-                    settingsModal.style.display = 'none';
-                }
+                if (event.target == settingsModal) settingsModal.style.display = 'none';
             });
             updateSettingsBtn.addEventListener('click', () => {
                 const newApiKey = apiKeyModalInput.value.trim();
                 const newModel = modelSelectModal.value;
-                const currentApiKey = localStorage.getItem('geminiApiKey');
-
-                const apiKeyToUse = newApiKey || currentApiKey;
-
+                const apiKeyToUse = newApiKey || localStorage.getItem('geminiApiKey');
                 if (initializeApp(apiKeyToUse, newModel)) {
-                    if (newApiKey) {
-                        localStorage.setItem('geminiApiKey', newApiKey);
-                    }
+                    if (newApiKey) localStorage.setItem('geminiApiKey', newApiKey);
                     localStorage.setItem('geminiModel', newModel);
                     alert('Settings updated successfully!');
                     settingsModal.style.display = 'none';
@@ -250,16 +411,13 @@
             imageUploadInput.addEventListener('change', (event) => {
                 const files = event.target.files;
                 if (files.length + uploadedImages.length > 5) {
-                    alert("You can upload a maximum of 5 images.");
-                    return;
+                    alert("You can upload a maximum of 5 images."); return;
                 }
                 for (const file of files) {
                     if (file.type.startsWith('image/')) {
                         const reader = new FileReader();
                         reader.onload = (e) => {
-                            uploadedImages.push({
-                                inlineData: { data: e.target.result.split(',')[1], mimeType: file.type }
-                            });
+                            uploadedImages.push({ inlineData: { data: e.target.result.split(',')[1], mimeType: file.type } });
                             const img = document.createElement('img');
                             img.src = e.target.result;
                             img.className = 'img-preview';
@@ -270,40 +428,55 @@
                 }
             });
 
-            // --- SUMMARIZATION & COPY LOGIC ---
+            // --- CLEAR CONTENT ---
+            clearContentBtn.addEventListener('click', () => {
+                textInput.value = '';
+                imagePreviewContainer.innerHTML = '';
+                uploadedImages = [];
+                imageUploadInput.value = '';
+                wordCountEl.textContent = '0 words';
+            });
+
+            // --- SUMMARIZATION LOGIC (UPDATED FOR STREAMING) ---
             getSummaryBtn.addEventListener('click', async () => {
                 const text = textInput.value.trim();
                 const format = formatSelect.value;
+                const language = languageSelect.value; 
                 if (!text && uploadedImages.length === 0) {
-                    alert("Please provide text or upload images to summarize.");
-                    return;
+                    alert("Please provide text or upload images to summarize."); return;
                 }
+                
                 loader.style.display = 'block';
-                summaryResultDiv.style.display = 'none';
+                summaryResultDiv.style.display = 'block'; 
+                summaryResultDiv.textContent = ''; 
                 getSummaryBtn.disabled = true;
+
                 try {
                     const promptParts = [];
-                    let promptText = `Summarize the following content from the text and/or image(s). Provide the summary in the form of ${format}. The summary should be in the same language as the source text.`;
-                    if (text) {
-                        promptParts.push(text);
+                    const instructionText = `Analyze the content from the text and/or image(s). Provide a summary ${format} in ${language}.`;
+                    promptParts.push({ text: instructionText });
+                    if (text) promptParts.push({ text: text });
+                    if (uploadedImages.length > 0) promptParts.push(...uploadedImages);
+                    
+                    const result = await model.generateContentStream({
+                        contents: [{ role: "user", parts: promptParts }]
+                    });
+
+                    for await (const chunk of result.stream) {
+                        const chunkText = chunk.text();
+                        summaryResultDiv.textContent += chunkText;
                     }
-                    if (uploadedImages.length > 0) {
-                        promptParts.push(...uploadedImages);
-                    }
-                    promptParts.unshift(promptText);
-                    const result = await model.generateContent({ contents: [{ role: "user", parts: promptParts }] });
-                    const summary = result.response.text();
-                    summaryResultDiv.textContent = summary;
+
                 } catch (error) {
                     console.error("Summarization Error:", error);
-                    summaryResultDiv.textContent = "An error occurred. Please check the console for details. Your API key might be invalid or the selected model is not available yet.";
+                    summaryResultDiv.textContent = "An error occurred. Please check the console. Your API key might be invalid or the model may be unavailable.";
                 } finally {
                     loader.style.display = 'none';
-                    summaryResultDiv.style.display = 'block';
                     getSummaryBtn.disabled = false;
                 }
             });
 
+            // --- COPY LOGIC ---
             copySummaryBtn.addEventListener('click', () => {
                 const textToCopy = summaryResultDiv.textContent;
                 if (textToCopy && textToCopy !== 'Your summary will appear here...') {
