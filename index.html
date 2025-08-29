@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Read Summarizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .custom-loader {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 5px solid #e5e7eb;
+            border-top-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .toast {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .toast.hide {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hide fixed top-5 right-5 bg-red-500 text-white py-2 px-4 rounded-lg shadow-md flex items-center gap-2">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-8 max-w-6xl">
+        <header class="text-center mb-8 md:mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-900">Quick Read Summarizer</h1>
+            <p class="text-slate-500 mt-2">Get the gist of any text or image content in seconds.</p>
+        </header>
+
+        <main class="grid md:grid-cols-2 gap-8">
+            <!-- Input Column -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+                <h2 class="text-2xl font-bold mb-4 border-b pb-3 text-slate-900">Your Content</h2>
+                
+                <!-- Image Upload -->
+                <div>
+                    <label class="font-semibold text-slate-700">Upload Images (Optional)</label>
+                    <div id="image-upload-box" class="mt-2 flex items-center justify-center w-full bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 hover:bg-slate-100 transition-colors">
+                        <div>
+                            <i class="fas fa-cloud-upload-alt text-4xl text-slate-400"></i>
+                            <p class="mt-2 text-sm text-slate-500">Click to upload or drag & drop (Max 5)</p>
+                        </div>
+                        <input type="file" id="image-upload-input" multiple accept="image/*" class="hidden">
+                    </div>
+                    <div id="image-preview-container" class="mt-4 flex flex-wrap gap-4"></div>
+                </div>
+
+                <!-- Text Input -->
+                <div class="mt-6">
+                    <label for="text-input" class="font-semibold text-slate-700">Or Paste Your Text</label>
+                    <textarea id="text-input" class="mt-2 w-full h-48 p-3 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow" placeholder="Type or paste your text here..."></textarea>
+                </div>
+
+                <!-- Options -->
+                <div class="mt-6 grid sm:grid-cols-2 gap-4">
+                     <div>
+                        <label for="model-select" class="font-semibold text-slate-700 text-sm">Model</label>
+                        <select id="model-select" class="mt-1 w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-1 focus:ring-blue-500">
+                            <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Fast)</option>
+                            <option value="gemini-1.5-pro-latest">Gemini 1.5 Pro (Quality)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="format-select" class="font-semibold text-slate-700 text-sm">Summary Format</label>
+                        <select id="format-select" class="mt-1 w-full p-2 border border-slate-300 rounded-md bg-white focus:ring-1 focus:ring-blue-500">
+                            <option value="concise bullet points">Bullet Points</option>
+                            <option value="a single paragraph">Paragraph</option>
+                            <option value="a few key takeaways">Key Takeaways</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <div class="mt-8">
+                    <button id="get-summary-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all shadow-md hover:shadow-lg disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Get Summary</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Output Column -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h2 class="text-2xl font-bold text-slate-900">Summary</h2>
+                    <button id="copy-btn" class="text-slate-500 hover:text-blue-600 disabled:text-slate-300 transition-colors" title="Copy to clipboard" disabled>
+                        <i class="far fa-copy text-lg"></i>
+                    </button>
+                </div>
+
+                <div id="output-container" class="mt-4 relative min-h-[400px]">
+                    <div id="loader" class="hidden absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+                        <div class="custom-loader"></div>
+                    </div>
+                    <div id="summary-result" class="text-slate-600 prose max-w-none">
+                        <p class="italic text-slate-400">Your summary will appear here...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM ELEMENTS ---
+            const imageUploadBox = document.getElementById('image-upload-box');
+            const imageUploadInput = document.getElementById('image-upload-input');
+            const imagePreviewContainer = document.getElementById('image-preview-container');
+            const textInput = document.getElementById('text-input');
+            const modelSelect = document.getElementById('model-select');
+            const formatSelect = document.getElementById('format-select');
+            const getSummaryBtn = document.getElementById('get-summary-btn');
+            const loader = document.getElementById('loader');
+            const summaryResultDiv = document.getElementById('summary-result');
+            const copyBtn = document.getElementById('copy-btn');
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+
+            // --- STATE ---
+            let uploadedImages = [];
+            let summaryContent = '';
+            
+            // --- TOAST NOTIFICATION ---
+            function showToast(message) {
+                toastMessage.textContent = message;
+                toast.classList.remove('hide');
+                setTimeout(() => {
+                    toast.classList.add('hide');
+                }, 3000);
+            }
+
+            // --- IMAGE HANDLING ---
+            imageUploadBox.addEventListener('click', () => imageUploadInput.click());
+            imageUploadBox.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                imageUploadBox.classList.add('border-blue-500', 'bg-slate-100');
+            });
+            imageUploadBox.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                imageUploadBox.classList.remove('border-blue-500', 'bg-slate-100');
+            });
+            imageUploadBox.addEventListener('drop', (e) => {
+                e.preventDefault();
+                imageUploadBox.classList.remove('border-blue-500', 'bg-slate-100');
+                handleFiles(e.dataTransfer.files);
+            });
+            imageUploadInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+            function handleFiles(files) {
+                if (files.length + uploadedImages.length > 5) {
+                    showToast("Maximum of 5 images allowed.");
+                    return;
+                }
+                for (const file of files) {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const imageId = `img-${Date.now()}-${Math.random()}`;
+                            uploadedImages.push({
+                                id: imageId,
+                                inlineData: {
+                                    data: e.target.result.split(',')[1],
+                                    mimeType: file.type,
+                                }
+                            });
+                            createImagePreview(e.target.result, imageId);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            }
+
+            function createImagePreview(src, id) {
+                const previewWrapper = document.createElement('div');
+                previewWrapper.className = 'relative group';
+                previewWrapper.dataset.id = id;
+
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = 'w-20 h-20 object-cover rounded-lg border-2 border-slate-200';
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'absolute top-0 right-0 -mt-2 -mr-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.onclick = () => {
+                    uploadedImages = uploadedImages.filter(img => img.id !== id);
+                    previewWrapper.remove();
+                };
+
+                previewWrapper.appendChild(img);
+                previewWrapper.appendChild(removeBtn);
+                imagePreviewContainer.appendChild(previewWrapper);
+            }
+            
+            // --- API CALL LOGIC ---
+            async function generateContentWithRetry(payload, retries = 3, delay = 1000) {
+                const apiKey = ""; // API Key will be injected by the environment.
+                const model = modelSelect.value;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const result = await response.json();
+                        
+                        if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0].text) {
+                            return result.candidates[0].content.parts[0].text;
+                        } else {
+                            console.error("Unexpected API response structure:", result);
+                            let errorMessage = "Could not find text in the model's response.";
+                            if (result.promptFeedback && result.promptFeedback.blockReason) {
+                                errorMessage = `Content blocked: ${result.promptFeedback.blockReason}. Please adjust your input.`
+                            }
+                            throw new Error(errorMessage);
+                        }
+
+                    } catch (error) {
+                        console.error(`Attempt ${i + 1} failed:`, error);
+                        if (i === retries - 1) throw error; // Re-throw last error
+                        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i))); // Exponential backoff
+                    }
+                }
+            }
+
+
+            // --- MAIN SUMMARIZATION LOGIC ---
+            getSummaryBtn.addEventListener('click', async () => {
+                const text = textInput.value.trim();
+                const format = formatSelect.value;
+
+                if (!text && uploadedImages.length === 0) {
+                    showToast("Please provide text or upload an image.");
+                    return;
+                }
+
+                loader.classList.remove('hidden');
+                summaryResultDiv.innerHTML = '';
+                getSummaryBtn.disabled = true;
+                copyBtn.disabled = true;
+
+                try {
+                    let prompt = `Summarize the following content in the form of ${format}. If there is text and image(s), summarize both together. Respond in the same language as the provided text. If no text is provided, describe the image(s).`;
+
+                    const contentParts = [
+                        { text: prompt },
+                        ...uploadedImages.map(img => img.inlineData),
+                         { text: `\n\nText to summarize:\n\n---\n${text}\n---` },
+                    ];
+                    
+                    const payload = { contents: [{ parts: contentParts }] };
+                    
+                    const summary = await generateContentWithRetry(payload);
+
+                    // A simple conversion from Markdown-like syntax to HTML
+                    summaryContent = summary;
+                    let formattedSummary = summary
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+                        .replace(/\*(.*?)\/g, '<em>$1</em>')   // Italics
+                        .replace(/^- (.*$)/gm, '<li class="ml-4 mb-1">$1</li>') // List items
+                        .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>'); // Wrap in UL
+
+                    summaryResultDiv.innerHTML = formattedSummary;
+                    copyBtn.disabled = false;
+
+                } catch (error) {
+                    console.error("Summarization Error:", error);
+                    summaryResultDiv.innerHTML = `<p class="text-red-500">An error occurred: ${error.message}. Please check your input or try a different model.</p>`;
+                    summaryContent = '';
+                } finally {
+                    loader.classList.add('hidden');
+                    getSummaryBtn.disabled = false;
+                }
+            });
+            
+            // --- COPY FUNCTIONALITY ---
+            copyBtn.addEventListener('click', () => {
+                if (summaryContent) {
+                    // Create a temporary textarea to hold the text
+                    const tempTextArea = document.createElement('textarea');
+                    tempTextArea.value = summaryContent;
+                    document.body.appendChild(tempTextArea);
+                    tempTextArea.select();
+                    try {
+                        // Use the older execCommand for wider browser/iframe compatibility
+                        document.execCommand('copy');
+                        showToast("Summary copied to clipboard!");
+                    } catch (err) {
+                        console.error('Failed to copy text: ', err);
+                        showToast("Failed to copy text.");
+                    }
+                    document.body.removeChild(tempTextArea);
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>
