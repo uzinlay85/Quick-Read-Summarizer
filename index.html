@@ -29,16 +29,21 @@
         .setup-container h1 { text-align: center; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
-        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg); }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg); box-sizing: border-box; }
         .btn { display: block; width: 100%; padding: 12px; border: none; border-radius: 8px; background-color: var(--button-color); color: white; font-size: 16px; cursor: pointer; transition: background-color 0.2s; }
         .btn:hover { background-color: var(--button-hover); }
         .api-link { font-size: 12px; text-align: right; margin-top: 5px; }
         .api-link a { color: var(--primary-color); text-decoration: none; }
         /* Main App Styles */
-        .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .app-header { display: flex; justify-content: space-between; align-items: center; }
+        .settings-btn { background: none; border: none; cursor: pointer; padding: 5px; }
+        .settings-btn svg { width: 24px; height: 24px; fill: #6c757d; }
+        .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
         .input-column, .output-column { background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: var(--shadow); }
-        .input-column h2, .output-column h2 { margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
-        textarea { width: 100%; height: 200px; padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg); resize: vertical; }
+        .column-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px; }
+        .column-header h2 { margin: 0; }
+        .copy-btn { background: #e9ecef; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
+        textarea { width: 100%; height: 200px; padding: 15px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--input-bg); resize: vertical; box-sizing: border-box; }
         .image-upload-box { border: 2px dashed var(--border-color); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; background: var(--input-bg); margin-bottom: 20px; }
         .image-upload-box:hover { border-color: var(--primary-color); }
         .image-preview-container { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
@@ -47,6 +52,10 @@
         #summary-result { min-height: 300px; background: var(--input-bg); border-radius: 8px; padding: 15px; white-space: pre-wrap; word-wrap: break-word; }
         .loader { display: none; margin: 50px auto; width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid var(--loader-color); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         /* Responsive */
         @media (max-width: 900px) { .app-grid { grid-template-columns: 1fr; } }
     </style>
@@ -77,20 +86,22 @@
 
     <div id="main-page" class="page">
         <div class="container">
-            <h1 style="text-align:center;">Quick Read Summarizer</h1>
+            <div class="app-header">
+                <h1>Quick Read Summarizer</h1>
+                <button id="settings-btn" class="settings-btn" title="Settings">
+                    <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.69-1.62-0.92L14.4,2.23C14.38,2.01,14.2,1.84,13.98,1.84 h-3.96c-0.22,0-0.4,0.17-0.43,0.39L9.2,4.55C8.61,4.78,8.08,5.09,7.58,5.47L5.19,4.51C4.97,4.44,4.72,4.51,4.6,4.73L2.68,8.05 c-0.11,0.2-0.06,0.47,0.12,0.61l2.03,1.58C4.78,10.56,4.76,10.86,4.76,11.16c0,0.3,0.02,0.6,0.06,0.9l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.69,1.62,0.92l0.39,2.32 c0.02,0.22,0.2,0.39,0.43,0.39h3.96c0.22,0,0.4-0.17,0.43-0.39l0.39-2.32c0.59-0.23,1.12-0.54,1.62-0.92l2.39,0.96 c0.22,0.07,0.47,0,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+                </button>
+            </div>
             <div class="app-grid">
                 <div class="input-column">
-                    <h2>Your Content</h2>
+                    <div class="column-header"><h2>Your Content</h2></div>
                     <p>Upload images or type your text below.</p>
-                    
                     <div id="image-upload-box" class="image-upload-box">
                         <span>⬆️ Upload Images (Max 5)</span>
                         <input type="file" id="image-upload-input" multiple accept="image/*" style="display:none;">
                     </div>
                     <div id="image-preview-container"></div>
-                    
                     <textarea id="text-input" placeholder="Type or paste your text here..."></textarea>
-                    
                     <div class="summarize-options">
                         <label for="format-select">Summarize Format</label>
                         <select id="format-select" class="form-group">
@@ -98,15 +109,37 @@
                             <option value="a single Paragraph">Paragraph</option>
                         </select>
                     </div>
-                    
                     <button id="get-summary-btn" class="btn">Get Summary</button>
                 </div>
                 <div class="output-column">
-                    <h2>Summary Result</h2>
+                    <div class="column-header">
+                        <h2>Summary Result</h2>
+                        <button id="copy-summary-btn" class="copy-btn">📋 Copy</button>
+                    </div>
                     <div id="loader" class="loader"></div>
                     <div id="summary-result">Your summary will appear here...</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span id="close-modal-btn" class="close-btn">&times;</span>
+            <h2>Settings</h2>
+            <div class="form-group">
+                <label for="api-key-modal">Gemini API Key</label>
+                <input type="password" id="api-key-modal" placeholder="Enter new API Key">
+            </div>
+            <div class="form-group">
+                <label for="model-select-modal">Gemini Model</label>
+                <select id="model-select-modal">
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                </select>
+            </div>
+            <button id="update-settings-btn" class="btn">Update Settings</button>
         </div>
     </div>
 
@@ -127,26 +160,40 @@
             const getSummaryBtn = document.getElementById('get-summary-btn');
             const loader = document.getElementById('loader');
             const summaryResultDiv = document.getElementById('summary-result');
+            const copySummaryBtn = document.getElementById('copy-summary-btn');
+
+            const settingsBtn = document.getElementById('settings-btn');
+            const settingsModal = document.getElementById('settings-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const apiKeyModalInput = document.getElementById('api-key-modal');
+            const modelSelectModal = document.getElementById('model-select-modal');
+            const updateSettingsBtn = document.getElementById('update-settings-btn');
 
             // --- STATE ---
             let uploadedImages = [];
             let genAI;
             let model;
 
-            // --- INITIALIZATION ---
-            function initializeApp() {
+            // --- INITIALIZATION & SETTINGS ---
+            function initializeApp(apiKey, modelName) {
+                try {
+                    genAI = new window.GoogleGenerativeAI(apiKey);
+                    model = genAI.getGenerativeModel({ model: modelName });
+                    setupPage.classList.remove('active');
+                    mainPage.classList.add('active');
+                    return true;
+                } catch (error) {
+                    alert("Failed to initialize with the provided API key. Please check it.");
+                    localStorage.clear();
+                    return false;
+                }
+            }
+
+            function loadAndInit() {
                 const savedApiKey = localStorage.getItem('geminiApiKey');
                 const savedModel = localStorage.getItem('geminiModel');
                 if (savedApiKey && savedModel) {
-                    try {
-                        genAI = new window.GoogleGenerativeAI(savedApiKey);
-                        model = genAI.getGenerativeModel({ model: savedModel });
-                        setupPage.classList.remove('active');
-                        mainPage.classList.add('active');
-                    } catch (error) {
-                        alert("Failed to initialize with saved API key. Please enter it again.");
-                        localStorage.clear();
-                    }
+                    initializeApp(savedApiKey, savedModel);
                 }
             }
 
@@ -157,16 +204,39 @@
                     alert('Please enter your Gemini API Key.');
                     return;
                 }
-                try {
-                    genAI = new window.GoogleGenerativeAI(apiKey);
-                    model = genAI.getGenerativeModel({ model: selectedModel });
+                if (initializeApp(apiKey, selectedModel)) {
                     localStorage.setItem('geminiApiKey', apiKey);
                     localStorage.setItem('geminiModel', selectedModel);
-                    setupPage.classList.remove('active');
-                    mainPage.classList.add('active');
-                } catch (error) {
-                    alert("Invalid API Key or model. Please check and try again.");
-                    console.error("Initialization Error:", error);
+                }
+            });
+
+            // --- MODAL LOGIC ---
+            settingsBtn.addEventListener('click', () => {
+                apiKeyModalInput.value = ''; // Clear previous input for security
+                apiKeyModalInput.placeholder = 'Enter new key (optional)';
+                modelSelectModal.value = localStorage.getItem('geminiModel') || 'gemini-1.5-pro';
+                settingsModal.style.display = 'block';
+            });
+            closeModalBtn.addEventListener('click', () => settingsModal.style.display = 'none');
+            window.addEventListener('click', (event) => {
+                if (event.target == settingsModal) {
+                    settingsModal.style.display = 'none';
+                }
+            });
+            updateSettingsBtn.addEventListener('click', () => {
+                const newApiKey = apiKeyModalInput.value.trim();
+                const newModel = modelSelectModal.value;
+                const currentApiKey = localStorage.getItem('geminiApiKey');
+
+                const apiKeyToUse = newApiKey || currentApiKey;
+
+                if (initializeApp(apiKeyToUse, newModel)) {
+                    if (newApiKey) {
+                        localStorage.setItem('geminiApiKey', newApiKey);
+                    }
+                    localStorage.setItem('geminiModel', newModel);
+                    alert('Settings updated successfully!');
+                    settingsModal.style.display = 'none';
                 }
             });
 
@@ -183,10 +253,7 @@
                         const reader = new FileReader();
                         reader.onload = (e) => {
                             uploadedImages.push({
-                                inlineData: {
-                                    data: e.target.result.split(',')[1],
-                                    mimeType: file.type,
-                                }
+                                inlineData: { data: e.target.result.split(',')[1], mimeType: file.type }
                             });
                             const img = document.createElement('img');
                             img.src = e.target.result;
@@ -198,41 +265,30 @@
                 }
             });
 
-            // --- SUMMARIZATION LOGIC ---
+            // --- SUMMARIZATION & COPY LOGIC ---
             getSummaryBtn.addEventListener('click', async () => {
                 const text = textInput.value.trim();
                 const format = formatSelect.value;
-
                 if (!text && uploadedImages.length === 0) {
                     alert("Please provide text or upload images to summarize.");
                     return;
                 }
-
                 loader.style.display = 'block';
                 summaryResultDiv.style.display = 'none';
                 getSummaryBtn.disabled = true;
-
                 try {
                     const promptParts = [];
-                    let promptText = "Summarize the following content";
-                    
+                    let promptText = `Summarize the following content from the text and/or image(s). Provide the summary in the form of ${format}. The summary should be in the same language as the source text.`;
                     if (text) {
-                        promptText += ` from the text: "${text}"`;
+                        promptParts.push(text);
                     }
                     if (uploadedImages.length > 0) {
-                        promptText += " and from the content of the attached image(s).";
                         promptParts.push(...uploadedImages);
                     }
-                    
-                    promptText += ` Please provide the summary in the form of ${format}. The summary should be in the same language as the source text.`;
                     promptParts.unshift(promptText);
-
-                    const result = await model.generateContent(promptParts);
-                    const response = await result.response;
-                    const summary = response.text();
-                    
+                    const result = await model.generateContent({ contents: [{ role: "user", parts: promptParts }] });
+                    const summary = result.response.text();
                     summaryResultDiv.textContent = summary;
-
                 } catch (error) {
                     console.error("Summarization Error:", error);
                     summaryResultDiv.textContent = "An error occurred. Please check the console for details. Your API key might be invalid or has expired.";
@@ -243,8 +299,21 @@
                 }
             });
 
+            copySummaryBtn.addEventListener('click', () => {
+                const textToCopy = summaryResultDiv.textContent;
+                if (textToCopy && textToCopy !== 'Your summary will appear here...') {
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        copySummaryBtn.textContent = '✅ Copied!';
+                        setTimeout(() => { copySummaryBtn.textContent = '📋 Copy'; }, 2000);
+                    }).catch(err => {
+                        alert('Failed to copy text.');
+                        console.error('Copy error:', err);
+                    });
+                }
+            });
+
             // --- START THE APP ---
-            initializeApp();
+            loadAndInit();
         });
     </script>
 </body>
