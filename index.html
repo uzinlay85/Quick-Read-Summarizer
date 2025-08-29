@@ -122,6 +122,9 @@
         }
 
         .column-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem; }
+        /* *** NEW *** */
+        .header-buttons { display: flex; gap: 0.5rem; }
+
         .secondary-btn {
             background: var(--input-bg); color: var(--text-light-color); border: 1px solid var(--border-color);
             border-radius: 8px; padding: 0.4rem 0.8rem; cursor: pointer; font-size: 0.875rem;
@@ -226,7 +229,10 @@
                 <div class="input-column">
                     <div class="column-header">
                         <h2>Your Content</h2>
-                        <button id="clear-content-btn" class="secondary-btn">Clear</button>
+                        <div class="header-buttons">
+                            <button id="paste-content-btn" class="secondary-btn">📋 Paste</button>
+                            <button id="clear-content-btn" class="secondary-btn">Clear</button>
+                        </div>
                     </div>
                     <p>Upload images or type your text below.</p>
                     <div id="image-upload-box" class="image-upload-box">
@@ -312,6 +318,7 @@
             const summaryResultDiv = document.getElementById('summary-result');
             const copySummaryBtn = document.getElementById('copy-summary-btn');
             const clearContentBtn = document.getElementById('clear-content-btn');
+            const pasteContentBtn = document.getElementById('paste-content-btn'); // NEW
             const wordCountEl = document.getElementById('word-count');
             const themeToggle = document.getElementById('theme-toggle');
             const settingsBtn = document.getElementById('settings-btn');
@@ -342,7 +349,7 @@
             // --- WORD COUNT ---
             textInput.addEventListener('input', () => {
                 const text = textInput.value.trim();
-                const words = text ? text.split(/\s+/).length : 0;
+                const words = text ? text.match(/\S+/g).length : 0;
                 wordCountEl.textContent = `${words} words`;
             });
 
@@ -427,17 +434,31 @@
                     }
                 }
             });
+            
+            // --- PASTE & CLEAR CONTENT ---
+            pasteContentBtn.addEventListener('click', async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text) {
+                        textInput.value += (textInput.value ? '\n' : '') + text;
+                        // Trigger input event to update word count
+                        textInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                } catch (err) {
+                    console.error('Failed to read clipboard contents: ', err);
+                    alert('Failed to paste from clipboard. Please grant clipboard access permission.');
+                }
+            });
 
-            // --- CLEAR CONTENT ---
             clearContentBtn.addEventListener('click', () => {
                 textInput.value = '';
                 imagePreviewContainer.innerHTML = '';
                 uploadedImages = [];
                 imageUploadInput.value = '';
-                wordCountEl.textContent = '0 words';
+                textInput.dispatchEvent(new Event('input', { bubbles: true })); // Update word count
             });
 
-            // --- SUMMARIZATION LOGIC (UPDATED FOR STREAMING) ---
+            // --- SUMMARIZATION LOGIC (STREAMING) ---
             getSummaryBtn.addEventListener('click', async () => {
                 const text = textInput.value.trim();
                 const format = formatSelect.value;
