@@ -88,6 +88,19 @@
         }
         .btn:hover { background: var(--primary-gradient-hover); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        
+        /* *** NEW STYLE FOR OCR BUTTON *** */
+        .btn.secondary {
+            background: var(--input-bg);
+            color: var(--text-light-color);
+            border: 1px solid var(--border-color);
+            margin-top: 0.75rem;
+        }
+        .btn.secondary:hover {
+            background: var(--border-color);
+            transform: translateY(-2px);
+        }
+
 
         .api-link { font-size: 0.8rem; text-align: right; margin-top: 0.5rem; }
         .api-link a { color: #667eea; text-decoration: none; font-weight: 500; }
@@ -122,7 +135,6 @@
         }
 
         .column-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem; }
-        /* *** NEW *** */
         .header-buttons { display: flex; gap: 0.5rem; }
 
         .secondary-btn {
@@ -266,6 +278,7 @@
                         </div>
                     </div>
                     <button id="get-summary-btn" class="btn">Get Summary</button>
+                    <button id="ocr-btn" class="btn secondary">Extract Text from Image (OCR)</button>
                 </div>
                 <div class="output-column">
                     <div class="column-header">
@@ -314,11 +327,12 @@
             const formatSelect = document.getElementById('format-select');
             const languageSelect = document.getElementById('language-select');
             const getSummaryBtn = document.getElementById('get-summary-btn');
+            const ocrBtn = document.getElementById('ocr-btn'); // NEW
             const loader = document.getElementById('loader');
             const summaryResultDiv = document.getElementById('summary-result');
             const copySummaryBtn = document.getElementById('copy-summary-btn');
             const clearContentBtn = document.getElementById('clear-content-btn');
-            const pasteContentBtn = document.getElementById('paste-content-btn'); // NEW
+            const pasteContentBtn = document.getElementById('paste-content-btn');
             const wordCountEl = document.getElementById('word-count');
             const themeToggle = document.getElementById('theme-toggle');
             const settingsBtn = document.getElementById('settings-btn');
@@ -441,7 +455,6 @@
                     const text = await navigator.clipboard.readText();
                     if (text) {
                         textInput.value += (textInput.value ? '\n' : '') + text;
-                        // Trigger input event to update word count
                         textInput.dispatchEvent(new Event('input', { bubbles: true }));
                     }
                 } catch (err) {
@@ -455,30 +468,20 @@
                 imagePreviewContainer.innerHTML = '';
                 uploadedImages = [];
                 imageUploadInput.value = '';
-                textInput.dispatchEvent(new Event('input', { bubbles: true })); // Update word count
+                textInput.dispatchEvent(new Event('input', { bubbles: true }));
             });
 
-            // --- SUMMARIZATION LOGIC (STREAMING) ---
-            getSummaryBtn.addEventListener('click', async () => {
-                const text = textInput.value.trim();
-                const format = formatSelect.value;
-                const language = languageSelect.value; 
-                if (!text && uploadedImages.length === 0) {
-                    alert("Please provide text or upload images to summarize."); return;
-                }
-                
+            // --- CORE API CALL FUNCTION (Refactored) ---
+            async function performApiCall(promptParts, buttonToDisable) {
                 loader.style.display = 'block';
-                summaryResultDiv.style.display = 'block'; 
-                summaryResultDiv.textContent = ''; 
+                summaryResultDiv.style.display = 'block';
+                summaryResultDiv.textContent = '';
+                
+                // Disable both buttons during API call
                 getSummaryBtn.disabled = true;
+                ocrBtn.disabled = true;
 
                 try {
-                    const promptParts = [];
-                    const instructionText = `Analyze the content from the text and/or image(s). Provide a summary ${format} in ${language}.`;
-                    promptParts.push({ text: instructionText });
-                    if (text) promptParts.push({ text: text });
-                    if (uploadedImages.length > 0) promptParts.push(...uploadedImages);
-                    
                     const result = await model.generateContentStream({
                         contents: [{ role: "user", parts: promptParts }]
                     });
@@ -489,13 +492,51 @@
                     }
 
                 } catch (error) {
-                    console.error("Summarization Error:", error);
+                    console.error("API Error:", error);
                     summaryResultDiv.textContent = "An error occurred. Please check the console. Your API key might be invalid or the model may be unavailable.";
                 } finally {
                     loader.style.display = 'none';
+                    // Re-enable both buttons
                     getSummaryBtn.disabled = false;
+                    ocrBtn.disabled = false;
                 }
+            }
+
+
+            // --- SUMMARIZATION LOGIC ---
+            getSummaryBtn.addEventListener('click', () => {
+                const text = textInput.value.trim();
+                const format = formatSelect.value;
+                const language = languageSelect.value;
+                if (!text && uploadedImages.length === 0) {
+                    alert("Please provide text or upload images to summarize.");
+                    return;
+                }
+
+                const promptParts = [];
+                const instructionText = `Analyze the content from the text and/or image(s). Provide a summary ${format} in ${language}.`;
+                promptParts.push({ text: instructionText });
+                if (text) promptParts.push({ text: text });
+                if (uploadedImages.length > 0) promptParts.push(...uploadedImages);
+
+                performApiCall(promptParts);
             });
+
+            // --- NEW OCR LOGIC ---
+            ocrBtn.addEventListener('click', () => {
+                if (uploadedImages.length === 0) {
+                    alert("Please upload an image to use the OCR feature.");
+                    return;
+                }
+
+                const promptParts = [];
+                const instructionText = "Extract all text from the provided image(s). Do not summarize. Just provide the raw text as it appears.";
+                promptParts.push({ text: instructionText });
+                promptParts.push(...uploadedImages);
+
+                performApiCall(promptParts);
+            });
+
 
             // --- COPY LOGIC ---
             copySummaryBtn.addEventListener('click', () => {
